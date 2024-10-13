@@ -1,0 +1,208 @@
+********************************************************************************
+				Copyright
+********************************************************************************
+
+		   Cret Alexandru-Andrei 315CAb 2022-2023
+
+********************************************************************************
+			     STRUCRTURA PROGRAMULUI
+********************************************************************************
+
+    Cu ajutorul structurii ld_ph stochez fiecare imagine incarcata in memorie. 
+ Voi retine in variabila p (de tip ld_ph) numarul de linii si coloane (p.ln si
+ p.col), selectia curenta(p.x1, p.x2, p.y1, p.y2), matricea de valori (p.mx - 
+ atat pentru imaginile alb-negru, cat si pentru cele color, diferenta fiind ca 
+ la imaginile color latimea va fi de trei ori mai mare pentru a stoca culorile
+ red, green si blue una dupa alta, corespunzator fiecarui pixel), magic-word-ul
+ (p.ph_type), pointerul si numele fisierului (p.file respectiv p.filename[])
+ si un vector de frecventa al valorilor (p.hstgr[]). Din ratiuni de economisire
+ a spatiului am ales ca variabilele intregi sa fie de tipul short int.
+ 
+    Macro-urile folosite au fost VAL (256) - echivalentul unui octet si IMPS 
+(de la IMPOSSIBLE) - valoarea maxima a unei valori de tip short int
+ 
+    Am folosit diferite functii de ajutor pe care le folosesc in diferite 
+ situatii precum:
+ 	
+    - swap_int: interschimba 2 valori de tip short int
+    
+    - load_check: verifica daca exista o imagine stocata in memorie, in caz
+ contrar afiseaza mesajul "No image loaded" si returneaza -1
+ 
+    - from_char_to_int: in main voi citi linie cu linie, astfel numerele vor
+ fi salvate initial intr-un sir de caractere. Scopul functiei este de a returna
+ un numar in formatul short int pentru a putea fi prelucrat ulterior. Intoarce
+ IMPS in caz ca ce este stocat in sirul s[] nu sunt caractere numerice. 
+ Functioneaza si pentru numere negative. Daca primul caracter este
+ semnul '-', il voi elimina din sir cu strcpy si voi schimba starea unei
+ variabile sw, cu ajutorul careia la final voi intoarce -abs(n).
+ 
+     - clamp: aduce o valoare reala in intervalul [0, 255];
+
+     - memory_fail: functie folosita pentru programarea defensiva, in cazul in
+  care o operatie esueaza, se afiseaza la stderr un mesaj corespunzator si se
+  iese din program cu un exit_code pentru a evita eventualele daune.
+    
+    - alloc_mx: returneaza adresa unei matrici alocate dinamic, utilizata pt.
+ incarcarea imaginii in memorie, dar si pentru alte matrici auxiliare folosite
+ in alte functii
+ 
+    - free_mx: elibereaza memoria unei matrici alocate dinamic.
+    
+    - clear_photo: elibereaza din memorie atat pointerul de fisier, cat si
+matricea asociata imaginii
+
+********************************************************************************
+			     FUNCTIONAREA PROGRAMULUI
+********************************************************************************
+
+
+    				     MAIN
+********************************************************************************
+    Are la baza un while care functioneaza pana la tastarea comenzii EXIT. Se 
+ citeste cu fgets linie cu linie, fiecare comanda si parametru fiind verificate
+ si prelucrate cu algoritmul de desfacere in cuvinte cu strtok si pointerul p.
+ De aici, in functie de comanda tastata se apeleaza functiile specifice.
+ 
+ 				     LOAD
+******************************************************************************** 				     
+    Daca exista alta imagine incarcata ii voi elibera memoria pentru a incarca
+ o noua imagine. Voi deschide noul fisier in format ascii (magic-word-ul si di-
+ mensiunile sunt in toate situatiile ascii). Citesc litera 'P' si magic-word-ul
+ in varibila type[] - (type[0] contine litera 'P", iar type[1] contine magic- 
+ word-ul. Dimensiunile matricei si numarul maxim vor fi citite cu grija la
+ eventuale comentarii (folosind functia skip_comment). In functie de tipul 
+ imaginii (color sau nu) voi stabili latimea necesara pentru a stoca matricea
+ de pixeli. In continuare, voi apela ascii_read pentru citirea matricii in 
+ format ascii, respectiv binary_read pentru binar. La final se apeleaza functia
+ select_all, pentru a seta in mod implicit intreaga dimensiune a imaginii ca 
+selectie curenta.
+ 
+    -skip_comment: intr-un while voi sari peste caracterele albe, si verific daca
+ linia citita este comentariu ('#'). In caz contrar, cu fseek voi repozitiona 
+ cursorul astfel incat sa se poata citi valorile necesare incarcarii imaginii in
+ memorie in mod recursiv.
+ 
+    -ascii_read: o functie clasica de citire a unei matrici dintr-un fisier text
+    
+    -binary_read: antetul contine pozitia curenta a cursorului deoarece cand re-
+ deschid cu freopen fisierul pentru citire binara, cursorul se va afla din nou
+ la inceput. Dupa ce repozitionez cu fsetpos cursorul, voi citi matricea valoare
+ cu valoare. Intrucat valorile binare se afla in [0, 255] , adica un octet, voi
+ citi cu fread variabila num de tip unsigned char (dimensiune 1 octet, retine 
+ valori de la 0 la 255) si voi converti ulterior la short int.
+ 
+  				     SELECT
+******************************************************************************** 	
+    -functia select_all retine colturile imaginii, adica (0,0) si (p.ln, o.col)
+     
+    -functia select: voi obtine coordonatele cu strtok si from_char_to_int, le 
+ interschimb la nevoie si inmultesc cu 3 ordonata imaginilor color.
+     
+    In main functia print_message pentru a afisa coordonatele selectate. Nu 
+ am putut afisa direct in main datorita lungimii prea lungi a liniei.
+ 
+   				   HISTOGRAM
+******************************************************************************** 
+  Cu ajutorul strtok voi salva nr. de bin-uri si stelute care vor fi folosite.
+  In subprogramul histogram apelez functia frequency_array care stocheaza in
+p.hstgr[] vectorul de frecventa al imaginii. In vectorul arr voi stoca suma de 
+aparitii corespunzatoare fiecarui bin si, de asemenea, voi afla valoarea maxima 
+(folosita in formula). In star_no voi calcula numarul de stelute care va trebui 
+afisat pe ecran, cu ajutorul formulei specificate in enuntul temei.
+ 
+   				    EQUALIZE
+******************************************************************************** 
+    Pentru a calcula acel H(i) din enunt, voi folosi din nou functia de
+determinare a lui p.hstgr[] (frequency_array). Pentru eficienta, am calculat in partial_sum[] sumele partiale corespunzatoare fiecarei valori de pixel (0-255)
+si am aplicat formula din document (255 / Area * partial_sum[i]). Pentru fiecare
+p.mx[i][j] am asociat valoarea calculata anterior. Aceste operatii se efectueaza
+in functia equalize.
+
+   				      CROP
+******************************************************************************** 
+   In functia crop am salvat intr-o imagine auxiliara numai selectia curenta, am 
+stabilit noile dimensiuni ale matricii si am dealocat spatiul vechii matrici. 
+Astfel, variabilei p i-a fost atribuita variabila aux, adica matricea crop-uita 
+si noile dimensiuni. S-a apelat din nou select_all.
+
+   				     ROTATE
+******************************************************************************** 
+   Comanda incepe cu rotate_signal() in care se determina tipul de rotatie (al 
+intregii imagini sau doar al selectiei). Functia care roteste cu -90 grade o 
+imagine intreaga se numeste rotate_whole. In variabila num am calculat de cate
+ori tb. sa rotesc pentru a ajunge la unghiul citit de la tastatura ( de 0 ori la 
++- 360 grade, respectiv (4 - (num / 90)) % 4). Daca initial num = 90, se va 
+aplica rotate_whole de 3 ori, daca num = -90 o singura data s.a.m.d. 
+ Daca selectia curenta nu este intreaga imagine, se va apela functia rotate().
+   
+   -rotate_whole: intr-o matrice auxiliara de dim. (p->col, p->ln) am salvat 
+valorile pixelilor astfel incat imaginea sa fie rotita cu 90 de grade in sens
+trigonometric. Exista doua cazuri (si doua formule) pentru ambele tipuri de 
+imagine (greyscale sau RGB). p->mx este dealocata, fiind inlocuit de pointerul
+matricei auxiliare aux.
+
+   -rotate: roteste o selectie a imaginii trigonometric cu 90 de grade. Se 
+bazeaza pe functia rotate_whole intrucat voi pune intr-o imagine auxiliara
+selectia curenta si voi roti, de fapt, intreaga imagine stocata in aux.
+Ulterior voi copia la loc portiunea selectata inapoi in p->mx.
+
+   				     APPLY
+******************************************************************************** 
+   In functia apply_signal voi verifica cu strtok tipul de filtru ce urmeaza sa
+fie aplicat. In vectorul ker[] voi stoca nucleul corespunzator comenzii. Intr-o
+matrice auxiliara v[][] voi stoca selectia curenta, pentru a o folosi la a 
+calcula noua valoare a fiecarui pixel. Pentru fiecare valoare (R, G, B) apelez
+functia apply_kernel, care returneaza valoarea rezultata in urma aplicarii ker-
+nelului (o valoare reala, ulterior tb. apelat clamp si convertit in short int).
+Aceste noi valori se salveaza in matricea v, urmand sa fie copiate in p->mx.
+
+   -functia apply_kernel: odata ales kernelul in apply_signal, ma voi folosi de 
+ dx[] si dy[], doi vectori de directie, pentru a afla coordonatele vecinilor
+ lui p->mx[i][j] si a calcula suma valorilor inmultite cu nucleul de imagine
+ (inclusiv valoarea pixelului curent).
+ 
+   				     SAVE
+******************************************************************************** 
+   In main voi folosi strtok pentru verifica faptul ca aceasta comanda este 
+valida. Se apleaza save_signal cu parametrul filename(poate contine atat numele
+fisierului, cat si parameteul "ascii".  In aceasta functie se apeleaza din nou
+la strtok pentru a salva noul nume al fisierului si pentru a determina existenta
+parametrului "ascii". Daca exista si "ascii", se va apela ascii_save, iar in caz
+contrar se apeleaza binary_save.
+
+  Atat in ascii_save cat si in binary_save se apeleaza functia file_header, care 
+are rolul de a deschide fisierul de iesire si de a scrie antetul imaginii (magic
+number, latime, inaltime, val. maxima).
+	
+   -ascii_save: magic-word-ul se schimba pentru formatul ascii. Dupa ce s-a
+apelat file_header(deshiderea fisierului de iesire si scrierea antetului),
+se va scrie in fisier fiecare element al matricei cu fprintf.
+
+   -binary_save: magic-word-ul se schimba pentru formatul binary. Dupa ce s-a
+apelat file_header(deschiderea fisierului de iesire si scrierea antetului),
+se va scrie in fisier matricea element cu element, cu ajutorul variabilei num,
+de tip unsigned char (1 octet, valori intre 0 si 255) prin fwrite
+
+   In ambele cazuri se va inchide fisierul de iesire.
+   
+				   EXIT
+******************************************************************************** 
+   Functia exit_editor realizeaza inchiderea eleganta a programului (dealocarea 
+memoriei si dat comanda exit(0); )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
